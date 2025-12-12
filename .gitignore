@@ -1,0 +1,12 @@
+db.sqlite3
+.idea
+*__pycache__
+.env
+venv
+notes
+*.ppk
+pub_putty_key
+/static/
+__pycache__/
+migrations
+qrcodes

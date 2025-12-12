@@ -1,0 +1,13 @@
+<table class="product-table">
+  <tbody>
+    {% for product in page_obj %}
+    <tr>
+      <td>{{ product.name }}</td>
+      <td>{{ product.barcode }}</td>
+      <td>{{ product.group }}</td>
+      <td>{{ product.created_at|date:"Y-m-d" }}</td>
+      <td>{{ product.show_on_site|yesno:"Да,Нет" }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>

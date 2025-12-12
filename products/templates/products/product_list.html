@@ -1,0 +1,368 @@
+{% load static %}
+{% load widget_tweaks %}
+
+
+
+
+
+<div onclick="location.href='{% url 'product_list' %}'"
+     style="background-color: #5A7B47; height: 2cm; width: 100%; display: flex; justify-content: flex-end; align-items: center; padding-right: 20px; cursor: pointer; position: relative;">
+  {% if user.is_authenticated %}
+  <form action="{% url 'logout' %}" method="post" style="margin-right: auto; padding-left: 20px;">
+    {% csrf_token %}
+    <button type="submit" style="background: none; border: none; color: white; font-size: 16px; cursor: pointer;">
+      🔒 Logout ({{ user.username }})
+    </button>
+  </form>
+{% endif %}
+<div id="qr-status-bar" style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%);
+     width:50%; background:#ccc; height:20px; display:none; border-radius:10px; overflow:hidden;">
+    <div id="qr-status-fill" style="width:0%; height:100%; background:#5A7B47;"></div>
+</div>
+
+     
+  <a href="https://www.esschertdesign.com/en"
+     target="_blank"
+     onclick="event.stopPropagation();"
+     style="display: inline-block; z-index: 2;">
+    <img src="{% static 'Logo_esschert_black-white.png' %}" alt="Esschert Logo" style="height: 120%; max-height: 3.6cm;">
+  </a>
+
+</div>
+
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <title>List of products</title>
+  {% load static %}
+  <link rel="stylesheet" href="{% static 'products/styles.css' %}">
+  <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+  <script>
+    
+  </script>
+</head>
+
+
+
+{% load dict_get %}
+{% load custom_filters %}
+
+
+<div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+
+  <!-- Форма фильтра -->
+  <form method="get" class="filter-form" style="display: flex; align-items: center; gap: 0.5rem;">
+    {% for field in filter.form %}
+      <div style="display: flex; align-items: center;">
+        <label class="filter-label" for="{{ field.id_for_label }}" style="margin-right: 4px;">{{ field.label }}:</label>
+        {{ field|add_class:"filter-input" }}
+      </div>
+    {% endfor %}
+    <button type="submit" class="filter-button">🔍 Filter</button>
+  </form>
+
+  <!-- Форма переключения без QR -->
+  <form method="get" class="filter-form" style="display: flex; align-items: center; gap: 0.5rem;">
+    <input type="hidden" name="without_qr" value="{% if not show_without_qr %}1{% else %}0{% endif %}">
+    <button type="submit" class="button">
+      {% if not show_without_qr %}
+        🔍 Show products without QR codes
+      {% else %}
+        🔄 Show all products
+      {% endif %}
+    </button>
+  </form>
+
+</div>
+
+{% if returntolist  %}
+  <a href="{% url 'product_list' %}" class="button">← Return to the list of products</a>
+{% endif %}
+
+
+<form method="post" action="{% url 'update_from_inriver' %}" id="update-form" style="display:inline;">
+  {% csrf_token %}
+  
+  <button type="submit" class="button top-margin" id="update-button">🔄 Update from Inriver</button>
+  <div id="loading-spinner" style="display: none; margin-left: 10px;">
+    <div class="spinner"></div>
+  </div>
+</form>
+
+{% if has_qr_codes %}
+<form method="post" action="{% url 'download_all_qr' %}"  style="display:inline;">
+  {% csrf_token %}
+  
+  <button type="submit" class="button top-margin" >📦 Download all QR codes (ZIP)</button>
+  <div style="display: none; margin-left: 10px;">
+    <div class="spinner"></div>
+  </div>
+</form>
+
+
+
+<form method="post" action="{% url 'delete_all_qr' %}" id="update-form" style="display:inline;">
+  {% csrf_token %}
+  
+  <button type="submit" class="button top-margin" id="update-button" onclick="return confirm('Delete all QR codes?')">🗑 Delete all QR codes</button>
+  <div id="loading-spinner" style="display: none; margin-left: 10px;">
+    <div class="spinner"></div>
+  </div>
+</form>
+
+{% endif %}
+
+
+
+
+{% if messages %}
+  <div class="mt-2">
+    {% for message in messages %}
+      <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+    {% endfor %}
+  </div>
+{% endif %}
+
+
+
+
+
+
+
+
+
+<form method="post" action="{% url 'generate_qr' %}" id="generateqgr-form">
+  
+  
+  {% csrf_token %}
+
+  <input type="hidden" name="select_all" id="select_all_flag" value="0">
+
+
+
+    <label for="domain_input">🌐 Website domain:</label>
+  <input type="text" id="domain_input" name="domain" value="{{ request.get_host }}" required style="padding: 5px; margin: 10px 0;">
+
+  
+  <div style="display: flex; flex-direction: row; align-items: center; gap: 20px; flex-wrap: wrap;">
+    <button type="submit" class="button  top-margin" id="generateqgr-button">📎 Generate QR codes</button>
+      <div id="generateqgr-spinner" style="display: none; margin-left: 10px;">
+        <div class="spinner"></div>
+    </div>
+
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th><input type="checkbox" onclick="toggleSelectAll(this)"> All</th>
+        <th>Image</th>
+        <th>Info</th>
+        <th>Product link</th>
+        <th>QR code</th>
+        <th>QR code path</th>
+      </tr>
+    </thead>
+    <tbody>
+  {% for product in page_obj %}
+  <tr>
+    <td><input type="checkbox" name="products" value="{{ product.id }}"></td>
+    <td>
+      
+        <img src="{{ product.product_image_url }}" alt="{{ product.name }}" width="100" />
+      </td>
+    <td>
+      <div><strong>Title:</strong> {{ product.name }}</div>
+      <div><strong>Inriver code:</strong> {{ product.external_id }}</div>
+      <div><strong>Barcode:</strong> {{ product.barcode }}</div>
+    </td>
+    <td>
+        <a href="{{ product.product_url }}" target="_blank">
+          Open the link
+        </a>
+      </td>
+    <td>
+      {% if product.qr_code_url %}
+       {% csrf_token %}
+      <a href="{{ product.qr_image_url }}" target="_blank">
+      <img src="{{ product.qr_code_url }}" alt="barcode" width="100" />
+      </a>
+   
+
+      {% else %}
+        <span class="text-muted">No QR code</span>
+      {% endif %}
+   
+    <td>
+    {% if product.qr_code_url %}
+     
+      <a href="{% url 'download_qr' product.id %}" class="btn btn-sm btn-success">
+        {% csrf_token %}
+        📥 Download QR
+      </a>
+    {% else %}
+      <span class="text-muted">QR not generated</span>
+    {% endif %}
+</td>
+
+  </tr>
+  {% endfor %}
+</tbody>
+<div class="pagination">
+  <div>
+    {% if page_obj.has_previous %}
+      <a href="?page=1{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">⏪ First </a>
+      <a href="?page={{ page_obj.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">◀️ Back</a>
+    {% endif %}
+
+    <span>Page {{ page_obj.number }} from {{ page_obj.paginator.num_pages }}</span>
+
+    {% if page_obj.has_next %}
+      <a href="?page={{ page_obj.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">Next ▶️</a>
+      <a href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">Last  ⏩</a>
+    {% endif %}
+  </div>
+</div>
+
+  </table>
+
+</form>
+
+<script>
+  
+  const form = document.getElementById("update-form");
+  const button = document.getElementById("update-button");
+  const spinner = document.getElementById("loading-spinner");
+
+  form.addEventListener("submit", function () {
+    button.disabled = true;
+    spinner.style.display = "inline-block";
+    button.innerText = "Loading...";
+    
+  });
+
+  form.addEventListener("submit", async function (e) {
+      e.preventDefault();
+      statusBar.style.display = "block";
+
+      const formData = new FormData(form);
+
+      // Запускаем задачу через AJAX
+      const response = await fetch("{% url 'update_from_inriver' %}", {
+          method: "POST",
+          body: formData,
+          headers: {
+              "X-CSRFToken": formData.get("csrfmiddlewaretoken")
+          }
+      });
+
+      if (!response.ok) {
+          alert("Error when starting a task");
+          return;
+      }
+
+      const data = await response.json();
+      if (data.task_id) {
+          pollTaskStatus(data.task_id);
+      }
+  });
+
+
+
+
+
+  const generateqgrform = document.getElementById("generateqgr-form");
+  const generateqgrbutton = document.getElementById("generateqgr-button");
+  const generateqgrspinner = document.getElementById("generateqgr-spinner");
+
+  generateqgrform.addEventListener("submit", function () {
+    generateqgrbutton.disabled = true;
+    generateqgrspinner.style.display = "inline-block";
+    generateqgrbutton.innerText = "QR codes are being generated...";
+  });
+  function toggleSelectAll(source) {
+      const checkboxes = document.getElementsByName('products');
+      for (let checkbox of checkboxes) {
+        checkbox.checked = source.checked;
+      }
+      
+      if (source.checked) {
+        document.getElementById("select_all_flag").value = "1";
+        alert("ALL products on this page will be selected");
+      } else {
+        document.getElementById("select_all_flag").value = "0";
+        alert("Selection cleared");
+      }
+    }
+  
+const generateForm = document.getElementById("generateqgr-form");
+
+const generateButton = document.getElementById("generateqgr-button");
+const generateSpinner = document.getElementById("generateqgr-spinner");
+const statusBar = document.getElementById("qr-status-bar");
+const statusFill = document.getElementById("qr-status-fill");
+
+generateForm.addEventListener("submit", async function (e) {
+    e.preventDefault();
+    generateButton.disabled = true;
+    generateSpinner.style.display = "inline-block";
+    generateButton.innerText = "QR codes are being generated...";
+    statusBar.style.display = "block";
+
+    const formData = new FormData(generateForm);
+
+    // Запускаем задачу через AJAX
+    const response = await fetch("{% url 'generate_qr' %}", {
+        method: "POST",
+        body: formData,
+        headers: {
+            "X-CSRFToken": formData.get("csrfmiddlewaretoken")
+        }
+    });
+
+    if (!response.ok) {
+        alert("Error when starting a task");
+        return;
+    }
+
+    const data = await response.json();
+    if (data.task_id) {
+        pollTaskStatus(data.task_id);
+    }
+});
+
+
+
+
+
+// Функция для опроса статуса задачи
+async function pollTaskStatus(taskId) {
+    try {
+        const response = await fetch(`/api/task-status/${taskId}/`);
+        if (!response.ok) throw new Error("Не удалось получить статус");
+
+        const data = await response.json();
+        const progress = Math.floor((data.processed / data.total) * 100);
+        statusFill.style.width = progress + "%";
+
+        if (!data.done) {
+            setTimeout(() => pollTaskStatus(taskId), 1000); 
+        } else {
+            statusFill.style.width = "100%";
+            generateButton.disabled = false;
+            generateSpinner.style.display = "none";
+            generateButton.innerText = "📎 Generate QR codes";
+            location.reload();
+        }
+    } catch (err) {
+        console.error(err);
+        setTimeout(() => pollTaskStatus(taskId), 3000);
+    }
+}
+
+    
+</script>
+
+</html>

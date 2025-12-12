@@ -1,0 +1,67 @@
+body.login {
+text-align: center;
+}
+#login-box h1 {
+color: #5A7B47;
+font-size: 22px;
+margin-bottom: 25px;
+}
+.form-row {
+margin-bottom: 15px;
+text-align: left;
+}
+input[type="text"], input[type="password"] {
+width: 100%;
+padding: 10px 12px;
+border: 1px solid #ccc;
+border-radius: 8px;
+transition: border-color 0.2s;
+}
+input[type="text"]:focus, input[type="password"]:focus {
+border-color: #5A7B47;
+outline: none;
+}
+.submit-row input[type="submit"] {
+background-color: #5A7B47;
+color: white;
+border: none;
+border-radius: 8px;
+padding: 10px 0;
+width: 100%;
+cursor: pointer;
+font-weight: 600;
+transition: background 0.3s;
+}
+.submit-row input[type="submit"]:hover {
+background-color: #4a6c3c;
+}
+.password-reset-link {
+margin-top: 10px;
+}
+.password-reset-link a {
+color: #5A7B47;
+text-decoration: none;
+font-size: 14px;
+}
+.password-reset-link a:hover {
+text-decoration: underline;
+}
+p.errornote {
+color: #d9534f;
+background: #fcebea;
+border: 1px solid #f5c6cb;
+padding: 10px;
+border-radius: 6px;
+font-size: 14px;
+margin-bottom: 15px;
+}
+/* Мобильная адаптация */
+@media (max-width: 480px) {
+#login-box {
+width: 92%;
+padding: 22px;
+}
+.top-banner img {
+height: 1.5cm;
+}
+}

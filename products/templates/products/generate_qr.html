@@ -1,0 +1,37 @@
+{% load static %}
+{% load dict_get %}
+
+<head>
+  <meta charset="UTF-8">
+  <title>List of products</title>
+  {% load static %}
+  <link rel="stylesheet" href="{% static 'products/styles.css' %}">
+  <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+  <script>
+    function toggleSelectAll(source) {
+      const checkboxes = document.getElementsByName('products');
+      for (let checkbox of checkboxes) {
+        checkbox.checked = source.checked;
+      }
+    }
+  </script>
+</head>
+{% if returntolist  %}
+<h3>Items not selected.</h3>
+  <a href="{% url 'product_list' %}" class="button">← Back to product list</a>
+{% endif %}
+
+{% if not returntolist  %}
+<form method="post">
+  {% csrf_token %}
+  {{ form.as_p }}
+  <button type="submit" class="button" >Generate QR codes</button>
+  {% for product in products %}
+    <div>
+      <input type="checkbox" name="product_ids" value="{{ product.id }}">
+      {{ product.name }}
+    </div>
+  {% endfor %}
+</form>
+
+{% endif %}

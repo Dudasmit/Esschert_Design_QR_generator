@@ -1,0 +1,51 @@
+{% load static %}
+
+<div onclick="location.href='{% url 'product_list' %}'"
+     style="background-color: #5A7B47; height: 2cm; width: 100%; display: flex; justify-content: flex-end; align-items: center; padding-right: 20px; cursor: pointer; position: relative;">
+  
+     
+  <a href="https://www.esschertdesign.com/en"
+     target="_blank"
+     onclick="event.stopPropagation();"
+     style="display: inline-block; z-index: 2;">
+    <img src="{% static 'Logo_esschert_black-white.png' %}" alt="Esschert Logo" style="height: 120%; max-height: 3.6cm;">
+  </a>
+
+</div>
+
+
+<h2>QR Code Generation Progress</h2>
+<div id="progress-container" style="width: 100%; background: #eee; height: 30px; border-radius: 4px;">
+  <div id="progress-bar" style="height: 100%; width: 0%; background: green; text-align: center; color: white;"></div>
+</div>
+
+<script>
+  const taskId = "{{ task_id }}";
+
+  function updateProgress() {
+    fetch(`/api/qr-progress/${taskId}/`)
+      .then(response => response.json())
+      .then(data => {
+        if (data.error) return;
+
+        const percent = Math.floor((data.processed / data.total) * 100);
+        const bar = document.getElementById('progress-bar');
+        bar.style.width = percent + '%';
+        bar.innerText = percent + '%';
+
+        if (!data.done) {
+          setTimeout(updateProgress, 1000);
+        } else {
+          bar.style.background = 'blue';
+          bar.innerText = '✔ Completed';
+          setTimeout(() => {
+            window.location.href = '/accounts/profile/';
+          }, 2000);
+
+
+        }
+      });
+  }
+
+  updateProgress();
+</script>

@@ -1,0 +1,213 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
+{% load static %}
+{% block title %}{% translate "Login" %}{% endblock %}
+
+{% block branding %}{% endblock %} {# убираем Django administration #}
+
+{% block extrastyle %}
+{{ block.super }}
+
+
+
+<style>
+  body.login {
+    margin: 0;
+    background-color: #f4f7f3;
+    font-family: "Inter", "Segoe UI", sans-serif;
+  }
+
+  /* ===== Верхний баннер ===== */
+  .top-banner {
+    background-color: #5A7B47;
+    height: 2.5cm;
+    width: 100%;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    padding-right: 20px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 10;
+    cursor: pointer;
+    
+  }
+
+  .top-banner img {
+    height: 2cm;
+    transition: opacity 0.3s;
+  }
+
+  .top-banner img:hover {
+    opacity: 0.9;
+  }
+
+  /* ===== Центрируем форму ===== */
+  #content {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+  }
+
+  #login-box {
+    background: white;
+    border: none;
+    border-radius: 16px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+    padding: 40px 50px;
+    width: 360px;
+    text-align: center;
+  }
+
+  #login-box h1 {
+    color: #5A7B47;
+    font-size: 22px;
+    margin-bottom: 25px;
+  }
+
+  .form-row {
+    margin-bottom: 15px;
+    text-align: left;
+  }
+
+  input[type="text"],
+  input[type="password"] {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    transition: border-color 0.2s;
+  }
+
+  input[type="text"]:focus,
+  input[type="password"]:focus {
+    border-color: #5A7B47;
+    outline: none;
+  }
+
+  .submit-row input[type="submit"] {
+    background-color: #5A7B47;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 0;
+    width: 100%;
+    cursor: pointer;
+    font-weight: 600;
+    transition: background 0.3s;
+  }
+
+  .submit-row input[type="submit"]:hover {
+    background-color: #4a6c3c;
+  }
+
+  .password-reset-link {
+    margin-top: 10px;
+  }
+
+  .password-reset-link a {
+    color: #5A7B47;
+    text-decoration: none;
+    font-size: 14px;
+  }
+
+  .password-reset-link a:hover {
+    text-decoration: underline;
+  }
+
+  p.errornote {
+    color: #d9534f;
+    background: #fcebea;
+    border: 1px solid #f5c6cb;
+    padding: 10px;
+    border-radius: 6px;
+    font-size: 14px;
+    margin-bottom: 15px;
+  }
+</style>
+{{ form.media }}
+{% endblock %}
+
+{% block bodyclass %}{{ block.super }} login{% endblock %}
+{% block usertools %}{% endblock %}
+{% block nav-global %}{% endblock %}
+{% block nav-sidebar %}{% endblock %}
+{% block content_title %}{% endblock %}
+{% block nav-breadcrumbs %}{% endblock %}
+
+{% block content %}
+
+
+
+<!-- ===== Верхний баннер с логотипом ===== -->
+<div class="top-banner" onclick="location.href='{% url 'product_list' %}'">
+  <a href="https://www.esschertdesign.com/en"
+     target="_blank"
+     onclick="event.stopPropagation();"
+     style="display: inline-block; z-index: 2;">
+    <img src="{% static 'Logo_esschert_black-white.png' %}" alt="Esschert Logo">
+  </a>
+</div>
+
+<!-- ===== Контент ===== -->
+<div id="content">
+  <div id="login-box">
+
+    <h1>{% translate "Login" %}</h1>
+
+    {% if form.errors and not form.non_field_errors %}
+      <p class="errornote">
+        {% blocktranslate count counter=form.errors.items|length %}
+        Please correct the error below.
+        {% plural %}
+        Please correct the errors below.
+        {% endblocktranslate %}
+      </p>
+    {% endif %}
+
+    {% if form.non_field_errors %}
+      {% for error in form.non_field_errors %}
+        <p class="errornote">{{ error }}</p>
+      {% endfor %}
+    {% endif %}
+
+    {% if user.is_authenticated %}
+      <p class="errornote">
+        {% blocktranslate trimmed %}
+        You are authenticated as {{ username }}, but are not authorized to access this page.
+        Would you like to log in with a different account?
+        {% endblocktranslate %}
+      </p>
+    {% endif %}
+
+    <form action="{{ app_path }}" method="post" id="login-form">
+      {% csrf_token %}
+      <div class="form-row">
+        {{ form.username.errors }}
+        {{ form.username.label_tag }}
+        {{ form.username }}
+      </div>
+      <div class="form-row">
+        {{ form.password.errors }}
+        {{ form.password.label_tag }}
+        {{ form.password }}
+        <input type="hidden" name="next" value="{{ next }}">
+      </div>
+
+      {% url 'admin_password_reset' as password_reset_url %}
+      {% if password_reset_url %}
+      <div class="password-reset-link">
+        <a href="{{ password_reset_url }}">{% translate 'Forgot your password or username?' %}</a>
+      </div>
+      {% endif %}
+
+      <div class="submit-row">
+        <input type="submit" value="{% translate 'Log in' %}">
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}
