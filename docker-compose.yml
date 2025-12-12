@@ -1,3 +1,5 @@
+env_file:
+  - .env
 
 services:
   web:
@@ -11,12 +13,12 @@ services:
     ports:
       - "8000:8000"
     environment:
-      DJANGO_SETTINGS_MODULE: inriver_qr.settings
-      DB_NAME: esschertqr
-      DB_USER: root
-      DB_PASSWORD: MysqlQR2025
-      DB_HOST: host.docker.internal
-      DB_PORT: 3306
+      DJANGO_SETTINGS_MODULE: ${DJANGO_SETTINGS_MODULE}
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT}
     depends_on:
       - redis
 
@@ -29,12 +31,12 @@ services:
     volumes:
       - .:/app
     environment:
-      DJANGO_SETTINGS_MODULE: inriver_qr.settings
-      DB_NAME: esschertqr
-      DB_USER: root
-      DB_PASSWORD: MysqlQR2025
-      DB_HOST: host.docker.internal
-      DB_PORT: 3306
+      DJANGO_SETTINGS_MODULE: ${DJANGO_SETTINGS_MODULE}
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT}
     depends_on:
       - redis
 
