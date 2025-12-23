@@ -42,7 +42,9 @@ from .inriver import  get_inriver_header
 BUCKET_NAME = os.getenv("BUCKET_NAME")
 S3_FOLDER = os.getenv("S3_FOLDER")
 IN_RIVER_URL = os.getenv("IN_RIVER_URL")
+AWS_REGION=os.getenv("AWS_REGION")
 
+AWS_URL = f"https://{BUCKET_NAME}.s3.{AWS_REGION}.amazonaws.com/{S3_FOLDER}"
 
 s3 = boto3.client("s3")
 
@@ -55,10 +57,10 @@ def product_list(request):
     if not request.user.is_authenticated:
         return redirect("/")
 
-    # Основной queryset
+    # Main queryset
     queryset = Product.objects.all().order_by('name')
 
-    # Фильтр: только товары без QR-кодов
+    # Filter: only products without QR codes
     show_without_qr = request.GET.get("without_qr") == "1"
     
     
@@ -66,15 +68,15 @@ def product_list(request):
         queryset = queryset.filter(qr_image_url__isnull= True)
 
     
-    # Применение фильтров
+    # Application of filters
     product_filter = ProductFilter(request.GET, queryset=queryset)
 
-    # Пагинация
+    # Pagination
     paginator = Paginator(product_filter.qs, 20)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
 
-    # Проверка: есть ли QR-коды вообще
+    # Check: Are there any QR codes at all?
     
     
     has_qr_codes = queryset.filter(qr_image_url__isnull= False).exists()
@@ -82,15 +84,9 @@ def product_list(request):
     
     
 
-    # AJAX-запрос от infinite scroll
-    #if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-    #    html = render_to_string('products/includes/product_rows.html', {'page_obj': page_obj})
-    #    return JsonResponse({
-    #        'html': html,
-    #        'has_next': page_obj.has_next()
-    #    })
 
-    # Рендер полной страницы
+
+    # Full page render
     return render(request, 'products/product_list.html', {
         'filter': product_filter,
         'page_obj': page_obj,
@@ -103,34 +99,28 @@ def redirect_by_barcode(request, barcode):
     return redirect(f"{os.getenv("QR_REDIRECT_URL")}{product.name}")
 
 def delete_all_qr(request):
-    #qr_dir = os.path.join(settings.MEDIA_ROOT, S3_FOLDER)  # или 'qr_codes', если используется такая папка
 
-    #if os.path.exists(qr_dir):
-    #    shutil.rmtree(qr_dir)
-    #    os.makedirs(qr_dir)  # Создаём заново пустую папку, если нужно
-    #    messages.success(request, "All QR codes have been successfully removed.")
-    #else:
-    #    messages.info(request, "No files were found for deletion.")
-        
         
     response = s3.list_objects_v2(Bucket=BUCKET_NAME, Prefix=S3_FOLDER)
+    
 
     if "Contents" not in response:
         messages.info(request, "No QR codes were found for deletion.")
         return redirect('product_list')
 
-    # Формируем список ключей для удаления
+    # Creating a list of keys to delete
     objects_to_delete = [
         {"Key": obj["Key"]}
         for obj in response["Contents"]
-        if not obj["Key"].endswith("/")  # пропускаем "папку"
+        if not obj["Key"].endswith("/")  # skip “folder”
     ]
 
     if not objects_to_delete:
         messages.info(request, "No QR codes were found for deletion.")
         return redirect('product_list')
 
-    # Удаляем все объекты
+    # Delete all objects
+    print("Deleting QR codes from S3...")
     s3.delete_objects(
         Bucket=BUCKET_NAME,
         Delete={"Objects": objects_to_delete}
@@ -138,12 +128,13 @@ def delete_all_qr(request):
     Product.objects.filter(qr_code_url__isnull=False).update(qr_code_url=None)
     Product.objects.filter(qr_image_url__isnull=False).update(qr_image_url=None)
     
-    return redirect('product_list')  # Возврат на главную
+    return redirect('product_list') 
 
 @csrf_exempt
 @login_required()
 def generate_qr_view(request):
     if request.method == 'POST':
+        
         selected_ids = request.POST.getlist('products')
         select_all = request.POST.get("select_all") == "1"
         include_barcode = 'include_barcode' in request.POST
@@ -154,7 +145,7 @@ def generate_qr_view(request):
             return render(request, 'products/generate_qr.html', {'returntolist': True})
         print("Starting QR generation task...")
 
-        # Запускаем Celery задачу асинхронно
+        # Launching a Celery task asynchronously
         task = generate_qr_for_products.delay(
             product_ids=selected_ids,
             select_all=select_all,
@@ -172,7 +163,7 @@ def generate_qr_view(request):
             done=False,
         )
 
-        # 🔹 Возвращаем task_id для фронта
+        # 🔹 Return task_id for the front end
         return JsonResponse({'task_id': task.id})
     
     return HttpResponse("Метод не поддерживается", status=405)
@@ -189,30 +180,27 @@ def generate_qr(request):
         
         include_barcode = 'include_barcode' in request.POST
         domain = request.POST.get('domain')
-        #print(select_all)
 
         if not selected_ids:
             return render(request, 'products/generate_qr.html', {'returntolist': True})
             
         if select_all:
-            # Выбрать ВСЕ товары с учётом фильтра (не только текущую страницу)
+            # Select ALL products based on the filter (not just the current page)
             product_filter = ProductFilter(request.session.get("last_filter", {}), queryset=Product.objects.all())
             products = product_filter.qs
         else:
             products = Product.objects.filter(id__in=selected_ids)
             
         file_paths = []
-        #qr_root = os.path.join(settings.MEDIA_ROOT, S3_FOLDER)
-        #os.makedirs(qr_root, exist_ok=True)
+ 
         
-        count = 0  # ← счётчик  файлов
+        count = 0  # ← file counter
        
         
         
 
         for product in products:
             qr_text = f"{product.name}"
-            #print("Generating QR for:", product)
             if include_barcode:
                 qr_text += f"\n{product.barcode}"
 
@@ -233,8 +221,8 @@ def generate_qr(request):
                     'created_at': date.today(),
                     'group': 'inriver',
                     'show_on_site': True,
-                    'qr_code_url': f"{os.getenv("AWS_URL")}{product.name}.png",
-                    'qr_image_url': extract_qr_data_from_image(product.name),
+                    'qr_code_url': f"{AWS_URL}{product.name}.png",
+                    'qr_image_url': extract_qr_data_from_image(product.name,AWS_URL),
                     
 
                     }
@@ -254,21 +242,21 @@ def generate_qr(request):
 
 @csrf_exempt
 def download_qr_zip(request, product_id):
-    # 1️⃣ Получаем товар
+    # 1️⃣ Receiving goods
     product = get_object_or_404(Product, id=product_id)
 
-    # 2️⃣ Формируем пути
+    # 2️⃣ We shape paths
     png_key = f"{S3_FOLDER}{product.name}.png"
     eps_key = f"{S3_FOLDER}{product.name}.eps"
 
-    # 3️⃣ Проверяем наличие файлов в S3
+    # 3️⃣ Checking for files in S3
     try:
         s3.head_object(Bucket=BUCKET_NAME, Key=png_key)
         s3.head_object(Bucket=BUCKET_NAME, Key=eps_key)
     except s3.exceptions.ClientError:
         return HttpResponse("No QR codes found for this product.", status=404)
 
-    # 4️⃣ Скачиваем файлы в память
+    # 4️⃣ Download files to memory and create ZIP
     buffer = BytesIO()
     with ZipFile(buffer, 'w') as zip_file:
         for key, ext in [(png_key, "png"), (eps_key, "eps")]:
@@ -277,21 +265,21 @@ def download_qr_zip(request, product_id):
             file_stream.seek(0)
             zip_file.writestr(f"{product.name}.{ext}", file_stream.getvalue())
 
-    # 5️⃣ Возвращаем ZIP как FileResponse
+    # 5️⃣ Return ZIP as FileResponse
     buffer.seek(0)
     response = FileResponse(buffer, as_attachment=True, filename=f"{product.name}_qr.zip")
     return response
 
 @csrf_exempt
 def download_all_qr(request):
-    # Буфер для ZIP-файла
+    # Buffer for ZIP file
     zip_buffer = BytesIO()
 
     with ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zipf:
         continuation_token = None
         total_files = 0
 
-        # S3 возвращает максимум 1000 объектов за раз, поэтому используем пагинацию
+        # S3 returns a maximum of 1,000 objects at a time, so we use pagination.
         while True:
             list_kwargs = {
                 "Bucket": BUCKET_NAME,
@@ -307,31 +295,31 @@ def download_all_qr(request):
 
             for obj in contents:
                 key = obj["Key"]
-                # Пропускаем "папочные" ключи (например qrcodes/)
+                # We skip “folder” keys (e.g., qrcodes/).
                 if key.endswith("/"):
                     continue
 
-                # Загружаем файл в память
+                # Uploading the file to memory
                 file_buffer = BytesIO()
                 s3.download_fileobj(BUCKET_NAME, key, file_buffer)
                 file_buffer.seek(0)
 
-                # Добавляем файл в ZIP
-                arcname = key[len(S3_FOLDER):]  # имя без префикса
+                # Add file to ZIP
+                arcname = key[len(S3_FOLDER):]  # name without prefix
                 zipf.writestr(arcname, file_buffer.read())
                 total_files += 1
 
-            # Проверяем, есть ли ещё страницы
+            # Checking if there are any more pages
             if response.get("IsTruncated"):
                 continuation_token = response.get("NextContinuationToken")
             else:
                 break
 
-    # Если файлов нет — вернуть 404
+    # If there are no files, return 404.
     if total_files == 0:
         return HttpResponse("No QR codes found in S3 bucket.", status=404)
 
-    # Подготавливаем ответ
+    # Preparing a response
     zip_buffer.seek(0)
     response = HttpResponse(
         zip_buffer.getvalue(),
@@ -453,7 +441,6 @@ def update_products_from_inriver_old(request):
                 }
                              ]
             }
-    # Эмуляция запроса к Inriver — замените на настоящий API
     try:
         
         response = requests.post('{}/api/v1.0.0/query'.format(IN_RIVER_URL),

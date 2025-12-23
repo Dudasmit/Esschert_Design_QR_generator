@@ -5,7 +5,7 @@ services:
     build: 
       context: .
       dockerfile: docker/web/Dockerfile
-    container_name: inriver_web
+    container_name: esschert_web
     command: ["sh", "/app/entrypoint.sh"]
     volumes:
       - .:/app
@@ -27,7 +27,7 @@ services:
     build: 
       context: .
       dockerfile: docker/celery/Dockerfile
-    container_name: inriver_celery
+    container_name: esschert_celery
     command: celery -A inriver_qr worker --loglevel=INFO
     volumes:
       - .:/app
@@ -45,6 +45,6 @@ services:
 
   redis:
     image: redis:7
-    container_name: inriver_redis
+    container_name: esschert_redis
     ports:
       - "6379:6379"

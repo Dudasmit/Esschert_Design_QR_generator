@@ -306,6 +306,22 @@ const statusFill = document.getElementById("qr-status-fill");
 
 generateForm.addEventListener("submit", async function (e) {
     e.preventDefault();
+    const selectedProducts = generateForm.querySelectorAll(
+        'input[name="products"]:checked'
+    );
+
+
+    const selectAll = generateForm.querySelector(
+        'input[name="select_all"]'
+    )?.checked;
+    
+    console.log(selectedProducts.length, selectAll);
+
+    if (selectedProducts.length === 0 && !selectAll) {
+        alert("Please select at least one product");
+        resetUI();
+        return;
+    }
     generateButton.disabled = true;
     generateSpinner.style.display = "inline-block";
     generateButton.innerText = "QR codes are being generated...";
@@ -334,7 +350,12 @@ generateForm.addEventListener("submit", async function (e) {
 });
 
 
-
+function resetUI() {
+    generateButton.disabled = false;
+    generateSpinner.style.display = "none";
+    generateButton.innerText = "Generate QR codes";
+    statusBar.style.display = "none";
+}
 
 
 // Функция для опроса статуса задачи

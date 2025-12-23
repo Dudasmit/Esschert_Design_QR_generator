@@ -1,40 +1,35 @@
 FROM python:3.13-slim AS builder
 
-# Установка зависимостей системы
-#RUN apt-get update && apt-get install -y \
-#    libpq-dev \
-#    gcc \
-#    && rm -rf /var/lib/apt/lists/*
-
 # Установка рабочей директории
 WORKDIR /app
-RUN apt update && apt install -y \
-    build-essential \
-    default-libmysqlclient-dev \
-    pkg-config \
-    libzbar0 \
-    libzbar-dev \
-    && apt clean
+
+# Установка системных зависимостей
+RUN apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y \
+        build-essential \
+        default-libmysqlclient-dev \
+        pkg-config \
+        libzbar0 \
+        libzbar-dev \
+    && rm -rf /var/lib/apt/lists/*
+
 # Копирование зависимостей
 COPY requirements.txt .
 RUN pip install --upgrade pip && pip install -r requirements.txt
-#RUN apt-get update && apt-get install -y libzbar0
 
 # Копируем весь проект
 COPY . .
 
-# Установка переменной окружения
+# Установка переменных окружения
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
-# Статические файлы
+# Собираем статику
 RUN python manage.py collectstatic --noinput
 
-# Открываем порт
-EXPOSE $PORT
+# Открываем порт (можно установить в .env)
+EXPOSE 8080
 
-# Запуск gunicorn
+# Запуск
 ENTRYPOINT ["/app/entrypoint.sh"]
 CMD ["gunicorn", "-b", "0.0.0.0:8080", "inriver_qr.wsgi:application"]
-
-

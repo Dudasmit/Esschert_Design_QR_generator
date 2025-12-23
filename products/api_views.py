@@ -20,7 +20,10 @@ import boto3
 
 BUCKET_NAME = os.getenv("BUCKET_NAME")
 S3_FOLDER = os.getenv("S3_FOLDER")
-AWS_URL = os.getenv("AWS_URL")
+AWS_REGION=os.getenv("AWS_REGION")
+
+AWS_URL = f"https://{BUCKET_NAME}.s3.{AWS_REGION}.amazonaws.com/{S3_FOLDER}"
+
 s3 = boto3.client("s3")
 
 

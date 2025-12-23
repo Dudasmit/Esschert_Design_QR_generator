@@ -10,25 +10,22 @@ import requests
 from io import BytesIO
 
 
-def extract_qr_data_from_image(name):
+def extract_qr_data_from_image(name,AWS_URL):
     #url =  f"https://esschertdesign-prod.s3.eu-west-1.amazonaws.com/qrcodes/{name}.png?mtime=0"
-    url =  f"{os.getenv("AWS_URL")}{name}.png?mtime=0"
+    url =  f"{AWS_URL}{name}.png?mtime=0"
     
     if not check_url_exists(url):
         return None
 
     try:
-        #print("Загрузка изображения из URL:", url)
+       
         response = requests.get(url)
         img = Image.open(BytesIO(response.content))
-        # Декодируем QR
+        # Decode QR
         decoded_objects = decode(img)
     
-        #image = Image.open(image_path)
-        #decoded_objects = decode(image)
         if decoded_objects:
             qr_data = decoded_objects[0].data.decode("utf-8")
-            #print(f"Декодированные данные из QR: {qr_data}")
             return qr_data
     except Exception as e:
         print(f"Ошибка при декодировании QR: {e}")
@@ -51,7 +48,7 @@ def remove_transparency(im, bg_color=(255, 255, 255)):
 
 
 def create_and_save_qr_code_eps(s3, url, item, GTIN, include_barcode, folder):
-    # Формируем URL для QR
+    # Form the URL for the QR
     data_url = (os.getenv("QR_REDIRECT_URL") or "") + str(item)
     bucket_name = os.getenv("BUCKET_NAME")
 
@@ -60,7 +57,7 @@ def create_and_save_qr_code_eps(s3, url, item, GTIN, include_barcode, folder):
 
     data = url + str(GTIN)
     
-    # Создаем QR-код
+    # Create a QR code
     qr = qrcode.QRCode(
         version=1,
         error_correction=qrcode.constants.ERROR_CORRECT_L,

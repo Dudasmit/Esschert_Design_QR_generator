@@ -8,8 +8,12 @@ import os
 
 BUCKET_NAME = os.getenv("BUCKET_NAME")
 S3_FOLDER = os.getenv("S3_FOLDER")
+AWS_REGION=os.getenv("AWS_REGION")
 
-CLOUDFRONT_URL = os.getenv("CLOUDFRONT_URL")
+AWS_URL = f"https://{BUCKET_NAME}.s3.{AWS_REGION}.amazonaws.com/{S3_FOLDER}"
+
+CLOUDFRONT_URL= f"https://{BUCKET_NAME}.s3.{AWS_REGION}.amazonaws.com/"
+
 s3 = boto3.client('s3')
 
 
@@ -43,7 +47,7 @@ class Command(BaseCommand):
                 # QR код существует, обновляем URL
                 qr_url = CLOUDFRONT_URL + S3_FOLDER + filename
                 #if product.qr_code_url != qr_url:
-                product.qr_image_url = extract_qr_data_from_image(product.name)
+                product.qr_image_url = extract_qr_data_from_image(product.name, AWS_URL)
                 product.qr_code_url = qr_url
                 product.save(update_fields=['qr_image_url', 'qr_code_url'])
                 updated_count += 1
@@ -65,7 +69,7 @@ class Command(BaseCommand):
             print(f"Найдено продуктов в БД: {product }")
             if product :
                 qr_url = CLOUDFRONT_URL + S3_FOLDER + filename
-                product.qr_image_url = extract_qr_data_from_image(product.name)
+                product.qr_image_url = extract_qr_data_from_image(product.name,AWS_URL)
                 product.qr_code_url = qr_url
                 product.save(update_fields=['qr_image_url', 'qr_code_url'])
                

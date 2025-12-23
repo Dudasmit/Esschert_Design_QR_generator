@@ -27,10 +27,10 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.environ.get('SECRET_KEY', 'cg#p$g+j9tax!#a3cup@1$8obt2_+&k3q+pmu)5%asj6yjpkag')
-BASE_API_URL = os.getenv("BASE_API_URL", None)
+BASE_API_URL = os.environ.get("BASE_API_URL", None)
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.getenv('DJANGO_DEBUG', 'False').lower() in ('true', '1', 'yes')
+DEBUG = os.environ.get('DJANGO_DEBUG', 'False').lower() in ('true', '1', 'yes')
 
 SECURE_SSL_REDIRECT =  os.environ.get('SECURE_SSL_REDIRECT', 'False') == 'True'
 CSRF_COOKIE_SECURE =  os.environ.get('CSRF_COOKIE_SECURE', 'False') == 'True'
@@ -47,7 +47,7 @@ SESSION_COOKIE_AGE = 1800
 
 ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS',  '*').split(',')
 
-ALLOWED_HOSTS = ALLOWED_HOSTS + ['51.20.78.106','tikhonovskyi.com','www.tikhonovskyi.com' ]
+
 
 CSRF_TRUSTED_ORIGINS = ['http://127.0.0.1:8000',
                         'http://localhost:8000',
@@ -59,7 +59,8 @@ CSRF_TRUSTED_ORIGINS = ['http://127.0.0.1:8000',
                         
                         ]
 if not DEBUG:
-    print("Production settings applied.")
+    
+    
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
     
 # Application definition
@@ -93,9 +94,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-#LOGIN_URL = "products/"
 
-#LOGIN_REDIRECT_URL = "products/"
 LOGIN_REDIRECT_URL = 'product_list'
 
 # Перенаправление на страницу логина, если пользователь не авторизован
@@ -167,7 +166,7 @@ DATABASES = {
         'NAME': os.environ.get("DB_NAME"),
         'USER': os.environ.get("DB_USER"),
         'PASSWORD': os.environ.get("DB_PASSWORD"),
-        'HOST': os.environ.get("DB_HOST"),  # host.docker.internal
+        'HOST': os.environ.get("DB_HOST"),  
         'PORT': os.environ.get("DB_PORT"),
         'OPTIONS': {
             "charset": "utf8mb4",
@@ -230,8 +229,8 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'static').replace('\\', '/')
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 
-CELERY_BROKER_URL = "redis://localhost:6379/0"  # адрес брокера
-CELERY_RESULT_BACKEND = "redis://localhost:6379/0"  # где хранить результаты
+#CELERY_BROKER_URL = "redis://localhost:6379/0"  # адрес брокера
+#CELERY_RESULT_BACKEND = "redis://localhost:6379/0"  # где хранить результаты
 CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"

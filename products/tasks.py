@@ -16,6 +16,9 @@ from django.utils import timezone
 BUCKET_NAME = os.getenv("BUCKET_NAME")
 S3_FOLDER = os.getenv("S3_FOLDER")
 IN_RIVER_URL = os.getenv("IN_RIVER_URL")    
+AWS_REGION=os.getenv("AWS_REGION")
+
+AWS_URL = f"https://{BUCKET_NAME}.s3.{AWS_REGION}.amazonaws.com/{S3_FOLDER}"
 
 s3 = boto3.client("s3")
 
@@ -40,8 +43,7 @@ def generate_qr_for_products(self, product_ids=None, select_all=False, include_b
     total = products.count()
     print(f"🚀 Generating shared_task", self.request.id)
 
-
-    # 🔹 Создаём/обновляем запись статуса задачи
+    # 🔹 Create/update task status entry
     task_status, _ = QRTaskStatus.objects.get_or_create(task_id=self.request.id)
     task_status.total = total
     task_status.processed = 0
@@ -58,7 +60,7 @@ def generate_qr_for_products(self, product_ids=None, select_all=False, include_b
                 qr_text += f"\n{product.barcode}"
             print(f"🔧 Generating QR for product ID {product.id}, Name: {product.name}")
 
-            # создаём QR-код через твою функцию
+            # create a QR code using your function
             result = create_and_save_qr_code_eps(
                 s3,
                 f"https://{domain}/01/0",
@@ -71,7 +73,7 @@ def generate_qr_for_products(self, product_ids=None, select_all=False, include_b
             if not isinstance(result, dict):
                 continue
 
-            # обновляем или создаём запись товара с URL QR-кода
+            # update or create a product record with a QR code URL
             Product.objects.update_or_create(
                 external_id=product.external_id,
                 defaults={
@@ -80,8 +82,8 @@ def generate_qr_for_products(self, product_ids=None, select_all=False, include_b
                     'created_at': date.today(),
                     'group': 'inriver',
                     'show_on_site': True,
-                    'qr_code_url': f"{os.getenv('AWS_URL')}{product.name}.png",
-                    'qr_image_url': extract_qr_data_from_image(product.name),
+                    'qr_code_url': f"{AWS_URL}{product.name}.png",
+                    'qr_image_url': extract_qr_data_from_image(product.name,AWS_URL),
                 }
             )
         except Exception as e:
@@ -111,7 +113,7 @@ def sync_products_from_inriver_task(self,entity_ids):
     print(f"🚀 Generating shared_task", self.request.id)
 
 
-   # 🔹 Создаём/обновляем запись статуса задачи
+   # 🔹 Create/update task status entry
     task_status, _ = QRTaskStatus.objects.get_or_create(task_id=self.request.id)
     task_status.total = total
     task_status.processed = 0
