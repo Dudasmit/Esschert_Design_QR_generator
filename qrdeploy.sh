@@ -80,7 +80,7 @@ fi
 info "Configuring root MySQL for password login..."
 if mysql -uroot -e "SELECT 1;" >/dev/null 2>&1; then
   mysql -uroot <<SQL
-ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY '${DB_PASS}';
+ALTER USER 'root'@'localhost' IDENTIFIED BY '${DB_PASS}';
 FLUSH PRIVILEGES;
 SQL
   info "root password has been set."
