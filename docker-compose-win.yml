@@ -1,10 +1,12 @@
+
+
 services:
   web:
     build: 
       context: .
       dockerfile: docker/web/Dockerfile
     container_name: esschert_web
-    command: ["bash", "-c", "/app/entrypoint.sh"]
+    command: ["sh", "/app/entrypoint.sh"]
     volumes:
       - .:/app
     ports:
@@ -16,11 +18,10 @@ services:
       DB_NAME: ${DB_NAME}
       DB_USER: ${DB_USER}
       DB_PASSWORD: ${DB_PASSWORD}
-      DB_HOST: mysql
+      DB_HOST: ${DB_HOST}
       DB_PORT: ${DB_PORT}
     depends_on:
       - redis
-      - mysql
 
   celery:
     build: 
@@ -37,30 +38,13 @@ services:
       DB_NAME: ${DB_NAME}
       DB_USER: ${DB_USER}
       DB_PASSWORD: ${DB_PASSWORD}
-      DB_HOST: mysql
+      DB_HOST: ${DB_HOST}
       DB_PORT: ${DB_PORT}
     depends_on:
       - redis
-      - mysql
 
   redis:
     image: redis:7
     container_name: esschert_redis
     ports:
       - "6379:6379"
-
-  mysql:
-    image: mysql:8
-    container_name: esschert_mysql
-    environment:
-      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
-      MYSQL_DATABASE: ${DB_NAME}
-      MYSQL_USER: ${DB_USER}
-      MYSQL_PASSWORD: ${DB_PASSWORD}
-    ports:
-      - "3306:3306"
-    volumes:
-      - mysql_data:/var/lib/mysql
-
-volumes:
-  mysql_data:

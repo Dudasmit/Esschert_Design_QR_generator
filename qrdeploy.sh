@@ -32,7 +32,7 @@ ADMIN_PASS="${ADMIN_PASS:-admin}"
 ADMIN_EMAIL="${ADMIN_EMAIL:-admin@admin.com}"
 
 # SERVICE NAME of your Django web container
-WEB_CONTAINER="${WEB_CONTAINER:-inriver_web}"
+WEB_CONTAINER="${WEB_CONTAINER:-esschert_web}"
 
 # Detect DB password (if need to configure MySQL)
 DB_PASS="${DB_PASSWORD:-${MYSQL_ROOT_PASSWORD:-${DB_ROOT_PASSWORD:-}}}"
