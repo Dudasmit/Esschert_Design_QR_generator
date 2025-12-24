@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 
-
 # -------------------------
 # Run this script INSIDE the project directory.
 # .env must already be present.
@@ -16,7 +15,9 @@ info(){ echo -e "\e[34m[INFO]\e[0m $*"; }
 warn(){ echo -e "\e[33m[WARN]\e[0m $*"; }
 fatal(){ echo -e "\e[31m[ERROR]\e[0m $*"; exit 1; }
 
+###############################################
 # 1. Check .env
+###############################################
 if [ ! -f ".env" ]; then
   fatal ".env Not found in the current directory. Place .env next to the script and run again."
 fi
@@ -34,14 +35,16 @@ ADMIN_EMAIL="${ADMIN_EMAIL:-admin@admin.com}"
 # SERVICE NAME of your Django web container
 WEB_CONTAINER="${WEB_CONTAINER:-esschert_web}"
 
-# Detect DB password (if need to configure MySQL)
+# Detect DB password
 DB_PASS="${DB_PASSWORD:-${MYSQL_ROOT_PASSWORD:-${DB_ROOT_PASSWORD:-}}}"
+DB_NAME="${DB_NAME:-esschertqr}"
+DB_HOST="${DB_HOST:-db}"
 
 ###############################################
 # 2. Install Docker if missing
 ###############################################
 if ! command -v docker >/dev/null 2>&1; then
-  info "Устанавливаю Docker..."
+  info "Installing Docker..."
   apt-get update -y
   apt-get install -y ca-certificates curl gnupg lsb-release
   curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
@@ -69,7 +72,7 @@ systemctl enable mysql || true
 systemctl start mysql
 
 ###############################################
-# 4. Set MySQL root password (optional)
+# 4. Set MySQL root password
 ###############################################
 if [ -z "${DB_PASS:-}" ]; then
   RNG="$(tr -dc A-Za-z0-9 </dev/urandom | head -c 12)"
@@ -80,17 +83,17 @@ fi
 info "Configuring root MySQL for password login..."
 if mysql -uroot -e "SELECT 1;" >/dev/null 2>&1; then
   mysql -uroot <<SQL
-ALTER USER 'root'@'localhost' IDENTIFIED BY '${DB_PASS}';
+ALTER USER 'root'@'%' IDENTIFIED BY '${DB_PASS}';
 FLUSH PRIVILEGES;
 SQL
-  info "root password has been set."
+  info "Root password has been set."
 fi
 
 ###############################################
 # 5. Determine docker compose command
 ###############################################
 if docker compose version >/dev/null 2>&1; then
-  COMPOSE_CMD="docker-compose"
+  COMPOSE_CMD="docker compose"
 elif command -v docker-compose >/dev/null 2>&1; then
   COMPOSE_CMD="docker-compose"
 else
@@ -100,12 +103,29 @@ fi
 ###############################################
 # 6. Build and run containers
 ###############################################
-info "Running docker compose build + up ..."
+info "Building and starting containers..."
 $COMPOSE_CMD build
 $COMPOSE_CMD up -d
 
-info "Containers started. Waiting 10 seconds..."
+info "Waiting 10 seconds for services to be ready..."
 sleep 10
+
+###############################################
+# 6.5 Wait for MySQL to be ready inside container
+###############################################
+info "Waiting for MySQL to be ready..."
+MAX_WAIT=30  # seconds
+WAITED=0
+
+while ! docker exec -i "$WEB_CONTAINER" bash -lc "python -c 'import MySQLdb; MySQLdb.connect(host=\"$DB_HOST\", user=\"root\", passwd=\"$DB_PASS\", db=\"$DB_NAME\")'" >/dev/null 2>&1; do
+    if [ "$WAITED" -ge "$MAX_WAIT" ]; then
+        fatal "MySQL not ready after $MAX_WAIT seconds!"
+    fi
+    info "Waiting for MySQL... $WAITED/$MAX_WAIT"
+    sleep 2
+    WAITED=$((WAITED+2))
+done
+info "MySQL is ready!"
 
 ###############################################
 # 7. Apply migrations & collectstatic
