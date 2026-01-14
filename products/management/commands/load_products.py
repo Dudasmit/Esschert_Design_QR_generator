@@ -1,13 +1,14 @@
 from django.core.management.base import BaseCommand
 import requests
 import json
-from products.models import Product
+from products.models import ItemCollection, Product
 from datetime import date
 from urllib.parse import quote
 import os
 
 class Command(BaseCommand):
     help = "Загрузка товаров из inRiver"
+    Product.objects.all().delete()
     
     
     def get_inriver_header(self):
@@ -20,15 +21,22 @@ class Command(BaseCommand):
         return 'https://api-prod1a-euw.productmarketingcloud.com'
 
     def handle(self, *args, **kwargs):
-        json_request =  {
-            "systemCriteria": [ ],
-            "dataCriteria": [ {
-                "fieldTypeId": "ItemIndicationWebshop",
-                "value": "1",
-                "operator": "Equal"
+        
+        collections = ItemCollection.objects.values_list('collection', flat=True)
+
+        json_request = {
+            "systemCriteria": [],
+            "dataCriteria": [
+                {
+                    "fieldTypeId": "ItemCollection",
+                    "value": collection,
+                    "operator": "Equal"
                 }
-                             ]
-            }
+                for collection in collections
+            ],
+            "dataCriteriaOperator": "Or"
+        }
+
         response = requests.post('{}/api/v1.0.0/query'.format(self.get_inriver_url()),
                                  headers= self.get_inriver_header(), data= json.dumps(json_request))
         if response.status_code == 200:

@@ -27,9 +27,10 @@ ENV PYTHONUNBUFFERED=1
 # Собираем статику
 RUN python manage.py collectstatic --noinput
 
+RUN chmod +x /app/entrypoint.sh
 # Открываем порт (можно установить в .env)
-EXPOSE 8080
+EXPOSE 8000
 
 # Запуск
-ENTRYPOINT ["bash", "-c","/app/entrypoint.sh"]
-CMD ["gunicorn", "-b", "0.0.0.0:8080", "inriver_qr.wsgi:application"]
+ENTRYPOINT ["/app/entrypoint.sh"]
+#CMD ["gunicorn", "-b", "0.0.0.0:8080", "inriver_qr.wsgi:application"]

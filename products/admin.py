@@ -1,10 +1,20 @@
 from django.contrib import admin
 from django.utils.html import format_html
 from urllib.parse import quote
-from .models import Product
+from .models import Product, ItemCollection, QRTaskStatus
 
-#admin.site.register(Product)
 
+admin.site.register(ItemCollection)
+
+@admin.register(QRTaskStatus)
+class QRTaskStatusAdmin(admin.ModelAdmin):
+    list_display = ('task_id', 'total', 'processed', 'progress', 'done', 'created_at')
+    list_filter = ('done', 'created_at')
+    search_fields = ('task_id',)
+
+    def progress(self, obj):
+        return f"{obj.progress}%"
+    progress.short_description = 'Progress'
 
 # Register your models here.
 @admin.register(Product)

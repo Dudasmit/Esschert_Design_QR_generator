@@ -1,7 +1,7 @@
 from django.shortcuts import render, get_object_or_404
 from django.contrib import messages
 from django.shortcuts import redirect
-from .models import Product, QRTaskStatus
+from .models import Product, QRTaskStatus, ItemCollection
 from .filters import ProductFilter
 import qrcode
 import tempfile
@@ -30,9 +30,8 @@ from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
 from django.views.decorators.csrf import csrf_exempt
 import boto3
-from .tasks import generate_qr_for_products
 from .inriver import  get_inriver_header
-
+import uuid
 
 
 
@@ -130,44 +129,6 @@ def delete_all_qr(request):
     
     return redirect('product_list') 
 
-@csrf_exempt
-@login_required()
-def generate_qr_view(request):
-    if request.method == 'POST':
-        
-        selected_ids = request.POST.getlist('products')
-        select_all = request.POST.get("select_all") == "1"
-        include_barcode = 'include_barcode' in request.POST
-        domain = request.POST.get('domain')
-        filter_data = request.session.get("last_filter", {})
-
-        if not selected_ids and not select_all:
-            return render(request, 'products/generate_qr.html', {'returntolist': True})
-        print("Starting QR generation task...")
-
-        # Launching a Celery task asynchronously
-        task = generate_qr_for_products.delay(
-            product_ids=selected_ids,
-            select_all=select_all,
-            include_barcode=include_barcode,
-            domain=domain,
-            filter_data=filter_data
-        )
-        print(f"🚀 Generating generate_qr_view", task.id)
-
-
-        QRTaskStatus.objects.create(
-            task_id=task.id,
-            total=len(selected_ids) if not select_all else 0, 
-            processed=0,
-            done=False,
-        )
-
-        # 🔹 Return task_id for the front end
-        return JsonResponse({'task_id': task.id})
-    
-    return HttpResponse("Метод не поддерживается", status=405)
-
 
 @csrf_exempt
 @login_required(login_url='login')
@@ -194,8 +155,18 @@ def generate_qr(request):
         file_paths = []
  
         
-        count = 0  # ← file counter
-       
+        count = 1 
+        
+        task_id = uuid.uuid4()
+        print(f"🚀 Generating generate_qr_view", task_id)
+
+
+  
+        task_status, _ = QRTaskStatus.objects.get_or_create(task_id=task_id)
+        task_status.total = len(selected_ids) if not select_all else 0
+        task_status.processed = 0
+        task_status.done = False
+        task_status.save()
         
         
 
@@ -229,10 +200,16 @@ def generate_qr(request):
                 )
 
             file_paths.append((product.id, filename))
+            task_status.processed = count
+            task_status.save(update_fields=["processed"])
+            
+            count += 1
+    
+        task_status.done = True
+        task_status.save(update_fields=["done"])
 
-  
-        
-        return redirect('product_list')
+        return JsonResponse({'task_id': task_id})
+    
 
     return HttpResponse("Метод не поддерживается", status=405)
 
@@ -381,57 +358,13 @@ def remove_transparency(im, bg_color=(255, 255, 255)):
 
 from django.contrib import messages
 from django.shortcuts import redirect
-from .tasks import sync_products_from_inriver_task
-
-def update_products_from_inriver(request):
-    json_request = {
-        "systemCriteria": [],
-        "dataCriteria": [
-            {
-                "fieldTypeId": "ItemIndicationWebshop",
-                "value": "1",
-                "operator": "Equal"
-            }
-        ]
-    }
-
-    try:
-        response = requests.post(
-            f"{IN_RIVER_URL}/api/v1.0.0/query",
-            headers=get_inriver_header(),
-            data=json.dumps(json_request)
-        )
-
-        response.raise_for_status()
-        inriver_data = response.json()
-       
-    except Exception as e:
-        print("Inriver connection error:", e)
-        return {"error": str(e)}
-
-    entity_ids = inriver_data.get("entityIds", [])
-
-    task = sync_products_from_inriver_task.delay(entity_ids)
-    print(f"🚀 Generating update from inriver", task.id, "entity_ids", len(entity_ids))
-
-    QRTaskStatus.objects.create(
-            task_id=task.id,
-            total=len(entity_ids), 
-            processed=0,
-            done=False,
-    )
-
-
-
-    #messages.success(request, "Импорт из Inriver запущен. Обновление выполняется в фоне.")
-    return JsonResponse({'task_id': task.id})
-    #return redirect('product_list')
-
 
 def update_products_from_inriver_old(request):
     created_count = 0
     updated_count = 0
     skipped_count = 0
+    
+    ''' 
     json_request =  {
             "systemCriteria": [ ],
             "dataCriteria": [ {
@@ -441,6 +374,45 @@ def update_products_from_inriver_old(request):
                 }
                              ]
             }
+            
+    json_request =  {
+        "systemCriteria": [],
+        "dataCriteria": [
+            {
+                "fieldTypeId": "ItemCollection",
+                "value": "AM",
+                "operator": "Equal"
+            } ,
+
+            {
+                "fieldTypeId": "ItemCollection",
+                "value": "FF",
+                "operator": "Equal"
+            } 
+
+        ],
+    "dataCriteriaOperator": "Or"
+
+      
+    }
+	        
+            
+    '''   
+    collections = ItemCollection.objects.values_list('collection', flat=True)
+
+    json_request = {
+        "systemCriteria": [],
+        "dataCriteria": [
+            {
+                "fieldTypeId": "ItemCollection",
+                "value": collection,
+                "operator": "Equal"
+            }
+            for collection in collections
+        ],
+        "dataCriteriaOperator": "Or"
+    }
+
     try:
         
         response = requests.post('{}/api/v1.0.0/query'.format(IN_RIVER_URL),
@@ -449,14 +421,26 @@ def update_products_from_inriver_old(request):
         response.raise_for_status()
 
         inriver_data = response.json()  # Ожидается список словарей с полями
+        print("Inriver data received:", len(inriver_data['entityIds']))
     except Exception as e:
         print("Begin_",e)
         messages.error(request, f"Ошибка при подключении к Inriver: {e}")
         return redirect('product_list')
-
+    
+    task_id = uuid.uuid4()
+    count = 1  
+    task_status, _ = QRTaskStatus.objects.get_or_create(task_id=task_id)
+    task_status.total = len(inriver_data['entityIds']) 
+    task_status.processed = 0
+    task_status.done = False
+    task_status.save()
+    
 
     for item in inriver_data['entityIds']:
         ext_id = item
+        task_status.processed = count
+        task_status.save(update_fields=["processed"])
+        count += 1
         if Product.objects.filter(external_id=ext_id).exists():
             skipped_count += 1
             continue
@@ -479,15 +463,23 @@ def update_products_from_inriver_old(request):
                     'product_image_url' : f"https://dhznjqezv3l9q.cloudfront.net/report_Image/normal/{product_name}_01.png"
                     }
                 )
+        task_status.processed = count
+        task_status.save(update_fields=["processed"])
+        count += 1
+
         if created:
             created_count += 1
         else:
             updated_count += 1
-
+            
+    task_status.done = True
+    task_status.save(update_fields=["done"])
+        
     messages.success(
         request,
         f"The update has been finalized: {created_count} added, {updated_count} updated, {skipped_count} missing (duplicates)."
     )
+    return JsonResponse({'task_id': task_id})
     return redirect('product_list')
 
 

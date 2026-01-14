@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # =========================================================
 # One-command deploy for Django + Docker + Host MySQL
+# (NO Redis, NO Celery)
 # =========================================================
 
 set -euo pipefail
@@ -13,7 +14,6 @@ fatal(){ echo -e "\e[31m[ERROR]\e[0m $*"; exit 1; }
 
 # ---------- checks ----------
 [ "$(id -u)" -eq 0 ] || fatal "Run this script as root (sudo ./qrdeploy.sh)"
-
 [ -f ".env" ] || fatal ".env not found in project directory"
 
 info "Loading .env"
@@ -41,12 +41,14 @@ if ! command -v docker >/dev/null 2>&1; then
   info "Installing Docker..."
   apt-get update -y
   apt-get install -y ca-certificates curl gnupg lsb-release
+
   curl -fsSL https://download.docker.com/linux/ubuntu/gpg \
     | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
-  echo \
-    "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] \
-    https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" \
+
+  echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] \
+https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" \
     > /etc/apt/sources.list.d/docker.list
+
   apt-get update -y
   apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
 fi
@@ -66,7 +68,7 @@ systemctl start mysql
 info "MySQL running"
 
 # =========================================================
-# 3. Ensure DB + USER (NO root modifications!)
+# 3. Ensure DB + USER
 # =========================================================
 info "Ensuring database and user exist..."
 
@@ -83,9 +85,9 @@ SQL
 info "Database and user ready"
 
 # =========================================================
-# 4. Test MySQL connection (CRITICAL)
+# 4. Test MySQL connection
 # =========================================================
-info "Testing MySQL connection from host..."
+info "Testing MySQL connection..."
 
 mysql \
   -h"${DB_HOST}" \
@@ -111,7 +113,7 @@ $COMPOSE_CMD up -d
 sleep 8
 
 # =========================================================
-# 6. Django checks
+# 6. Django
 # =========================================================
 docker ps --format '{{.Names}}' | grep -q "^${WEB_CONTAINER}$" \
   || fatal "Web container ${WEB_CONTAINER} not running"
@@ -123,19 +125,21 @@ info "Collecting static..."
 docker exec "$WEB_CONTAINER" python manage.py collectstatic --noinput
 
 # =========================================================
-# 7. Superuser
+# 7. Django superuser
 # =========================================================
 info "Ensuring Django superuser exists..."
 
 docker exec -i "$WEB_CONTAINER" python manage.py shell <<EOF
 from django.contrib.auth import get_user_model
 User = get_user_model()
+
 u, _ = User.objects.get_or_create(username="${ADMIN_USER}")
-u.email="${ADMIN_EMAIL}"
+u.email = "${ADMIN_EMAIL}"
 u.set_password("${ADMIN_PASS}")
-u.is_staff=True
-u.is_superuser=True
+u.is_staff = True
+u.is_superuser = True
 u.save()
+
 print("Admin ready:", u.username)
 EOF
 

@@ -11,3 +11,4 @@ pub_putty_key
 __pycache__/
 migrations
 qrcodes
+logs

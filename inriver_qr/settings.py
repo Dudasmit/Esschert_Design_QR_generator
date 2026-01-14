@@ -46,20 +46,13 @@ SESSION_COOKIE_AGE = 1800
 
 
 ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS',  '*').split(',')
+CSRF_TRUSTED_ORIGINS = os.environ.get('CSRF_TRUSTED_ORIGINS',  '*').split(',')
 
 
 
-CSRF_TRUSTED_ORIGINS = ['http://127.0.0.1:8000',
-                        'http://localhost:8000',
-                        
-                        'https://tikhonovskyi.com',
-                        'https://tikhonovskyi.com/',
-                        'http://51.20.78.106',
-                        'https://51.20.78.106',
-                        
-                        ]
-if not DEBUG:
-    
+
+
+if not DEBUG:  
     
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
     
@@ -229,9 +222,53 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'static').replace('\\', '/')
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 
-#CELERY_BROKER_URL = "redis://localhost:6379/0"  # адрес брокера
-#CELERY_RESULT_BACKEND = "redis://localhost:6379/0"  # где хранить результаты
-CELERY_ACCEPT_CONTENT = ["json"]
-CELERY_TASK_SERIALIZER = "json"
-CELERY_RESULT_SERIALIZER = "json"
-CELERY_TIMEZONE = "UTC"
+
+
+LOG_DIR = BASE_DIR / "logs"
+LOG_DIR.mkdir(exist_ok=True)
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+
+    "formatters": {
+        "verbose": {
+            "format": "[{asctime}] {levelname} {name} {message}",
+            "style": "{",
+        },
+    },
+
+    "handlers": {
+        "file": {
+            "class": "logging.FileHandler",
+            "filename": BASE_DIR / "logs/django.log",
+            "formatter": "verbose",
+        },
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "verbose",
+        },
+    },
+
+    "loggers": {
+        # 🔹 Все Django запросы (views, middleware)
+        "django.request": {
+            "handlers": ["file", "console"],
+            "level": "INFO",
+            "propagate": False,
+        },
+
+        # 🔹 Ошибки
+        "django.server": {
+            "handlers": ["file", "console"],
+            "level": "INFO",
+            "propagate": False,
+        },
+
+        # 🔹 Твой код
+        "": {
+            "handlers": ["file", "console"],
+            "level": "INFO",
+        },
+    },
+}

@@ -1,3 +1,4 @@
+import os
 from django.core.management.base import BaseCommand
 from urllib.parse import quote
 from products.models import Product  # 👈 замени на реальное имя приложения и модели

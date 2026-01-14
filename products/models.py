@@ -38,3 +38,8 @@ class QRTaskStatus(models.Model):
         return int((self.processed / self.total) * 100)
     
     
+class ItemCollection(models.Model):
+    collection = models.CharField(max_length=255)
+
+    def __str__(self):
+        return self.collection
