@@ -27,6 +27,8 @@ ENV PYTHONUNBUFFERED=1
 # Собираем статику
 RUN python manage.py collectstatic --noinput
 
+
+
 RUN chmod +x /app/entrypoint.sh
 # Открываем порт (можно установить в .env)
 EXPOSE 8000
