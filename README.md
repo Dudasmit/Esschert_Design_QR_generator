@@ -19,7 +19,8 @@ You can see the description at yourdomain/swagger.
 
 
 To deploy the solution, you can use the qrdeploy.sh automatic installation file.
-
+chmod +x qrdeploy.sh
+sudo ./qrdeploy.sh
 
 
 
