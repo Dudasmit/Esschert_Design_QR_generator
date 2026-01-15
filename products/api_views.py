@@ -6,7 +6,7 @@ from drf_yasg.utils import swagger_auto_schema
 from .serializers import GenerateQRInputSerializer
 from .models import Product
 from .filters import ProductFilter
-from .views import create_and_save_qr_code_eps
+from .views import create_and_save_qr_code_eps , extract_qr_data_from_image
 import os
 from django.conf import settings
 from rest_framework.views import APIView
@@ -16,7 +16,7 @@ import base64
 from drf_yasg import openapi
 from django.views.decorators.csrf import csrf_exempt
 import boto3
-
+from datetime import date
 
 BUCKET_NAME = os.getenv("BUCKET_NAME")
 S3_FOLDER = os.getenv("S3_FOLDER")
@@ -65,7 +65,6 @@ def generate_qr_api(request):
     data = serializer.validated_data
     product_ids = data.get("product_ids", [])
     select_all = data.get("select_all", False)
-    include_barcode = data.get("include_barcode", False)
     domain = data.get("domain")
 
     if not product_ids and not select_all:
@@ -84,29 +83,36 @@ def generate_qr_api(request):
     generated_products = []
     for product in products:
         url = f"https://{domain}/01/0"
-        result = create_and_save_qr_code_eps(s3,url, product.name, product.barcode, include_barcode, S3_FOLDER)
+        result = create_and_save_qr_code_eps(s3,url, product.name, product.barcode,  S3_FOLDER)
 
         if not isinstance(result, dict):
             continue
+        product, created = Product.objects.update_or_create(
+        external_id=product.external_id,
+        defaults={
+                'name': product.name,
+                'barcode': product.barcode,
+                'created_at': date.today(),
+                'group': 'inriver',
+                'show_on_site': True,
+                'qr_code_url': f"{AWS_URL}{product.name}.png",
+                'qr_image_url': extract_qr_data_from_image(product.name,AWS_URL),
+                
+
+                }
+            )
 
         product_files = []
 
         for file_type, file_url in result.items():
             filename = f"{product.name}.{file_type}"
-            #local_path = os.path.join(settings.MEDIA_ROOT, S3_FOLDER, filename)
 
-            #try:
-                #with open(local_path, "rb") as f:
-                    #image_base64 = base64.b64encode(f.read()).decode("utf-8")
-            #except Exception as e:
-                #image_base64 = None
-                #print(f"Не удалось прочитать {local_path}: {e}")
 
             product_files.append({
                 "filename": filename,
                 "file_type": file_type,
                 "url": file_url,
-                #"image_base64": image_base64
+                
             })
 
         generated_products.append({

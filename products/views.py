@@ -139,7 +139,6 @@ def generate_qr(request):
         select_all = request.POST.get("select_all") == "1"
         
         
-        include_barcode = 'include_barcode' in request.POST
         domain = request.POST.get('domain')
 
         if not selected_ids:
@@ -172,14 +171,12 @@ def generate_qr(request):
 
         for product in products:
             qr_text = f"{product.name}"
-            if include_barcode:
-                qr_text += f"\n{product.barcode}"
 
             filename = f"{product.name.replace(' ', '_')}.png"
             
+            url = f"https://{domain}/01/0"
             
-            
-            result = create_and_save_qr_code_eps(s3,f"https://{domain}/01/0", product.name, product.barcode, include_barcode, S3_FOLDER)
+            result = create_and_save_qr_code_eps(s3,url, product.name, product.barcode,  S3_FOLDER)
             if not isinstance(result, dict):
                 continue
          

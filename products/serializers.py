@@ -6,5 +6,4 @@ class GenerateQRInputSerializer(serializers.Serializer):
         child=serializers.IntegerField(), required=False
     )
     select_all = serializers.BooleanField(default=False)
-    include_barcode = serializers.BooleanField(default=False)
     domain = serializers.CharField()

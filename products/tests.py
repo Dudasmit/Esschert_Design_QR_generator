@@ -32,7 +32,6 @@ class GenerateQRAPITestCase(APITestCase):
         payload = {
             "product_ids": [self.product1.id, self.product2.id],
             "select_all": False,
-            "include_barcode": True,
             "domain": "tikhonovskyi.com"  # 👈 добавлено
         }
         response = self.client.post(self.url, payload, format='json')
@@ -47,7 +46,6 @@ class GenerateQRAPITestCase(APITestCase):
         payload = {
             "product_ids": [self.product1.id],
             "select_all": False,
-            "include_barcode": True
         }
         response = self.client.post(self.url, payload, format='json')
         self.assertEqual(response.status_code, 400)
@@ -58,7 +56,6 @@ class GenerateQRAPITestCase(APITestCase):
         payload = {
             "product_ids": [],
             "select_all": False,
-            "include_barcode": False,
             "domain": ""
         }
         response = self.client.post(self.url, payload, format='json')
