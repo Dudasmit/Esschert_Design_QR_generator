@@ -25,8 +25,10 @@ You can see the description at yourdomain/swagger.
 
 ## Deployment
 
+Download the project from GitHub:
 git clone https://github.com/Dudasmit/Esschert_Design_QR_generator.git
 
+Open the project folder:
 cd inriver_QR_generator_AWS
 
 Rename the file with variables:
@@ -44,9 +46,10 @@ docker compose build --no-cache
 docker compose up -d
 
 Check if the container is working: 
-
 docker ps
 
+If something went wrong, check the container logs:
+docker logs qr_code_genaretor
 
 To deploy the solution, you can use the qrdeploy.sh automatic installation file.
 chmod +x qrdeploy.sh

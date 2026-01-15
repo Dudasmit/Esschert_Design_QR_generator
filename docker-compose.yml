@@ -5,7 +5,7 @@ services:
     build: 
       context: .
       dockerfile: docker/web/Dockerfile
-    container_name: django_web
+    container_name: qr_code_genaretor
     env_file:
       - .env
     environment:
