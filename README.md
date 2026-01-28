@@ -85,7 +85,7 @@ SELECT user, host FROM mysql.user;
 
 If the user exists, check that they can connect from the desired host (localhost or % for all):
 
-GRANT ALL PRIVILEGES ON esschertqr.* TO ‘root’@'%‘ IDENTIFIED BY 'MysqlQR2025’; FLUSH PRIVILEGES;
+GRANT ALL PRIVILEGES ON your_database.* TO 'your_user'@'%' IDENTIFIED BY 'your_password'; FLUSH PRIVILEGES;
 
 
 your_database, your_user, your_password — substitute your values from .env.
