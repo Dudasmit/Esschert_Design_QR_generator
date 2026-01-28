@@ -63,7 +63,9 @@ docker logs qr_code_genaretor
 To deploy the solution, you can use the qrdeploy.sh automatic installation file.
 
 chmod +x ./entrypoint.sh
+
 chmod +x qrdeploy.sh
+
 sudo ./qrdeploy.sh
 
 ### If there is an error connecting to MySQL - “Cannot connect to MySQL with provided credentials”:
