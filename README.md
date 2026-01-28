@@ -60,7 +60,7 @@ If something went wrong, check the container logs:
 docker logs qr_code_genaretor
 
 
-To deploy the solution, you can use the qrdeploy.sh automatic installation file.
+To deploy the solution, you can use the qrdeploy.sh automatic installation file by following these steps in order:
 
 chmod +x ./entrypoint.sh
 
